@@ -211,6 +211,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   // num 가져오기
   String getNum() => syntaxIndex.isPositive ? padText.substring(syntaxIndex+1) : '0';
 
+  // 계산 결과 가져오기
   String getTotal(String x) {
     if(x == '=') {
       return total;
