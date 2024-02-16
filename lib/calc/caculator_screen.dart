@@ -1,3 +1,4 @@
+import 'package:calc/base/extensions.dart';
 import 'package:flutter/material.dart';
 
 import 'calc_model.dart';
@@ -27,7 +28,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   String total = ''; // 계산기 보여줄 텍스트
   String padText = '';
   String syntax = ''; // 연산 부호
-  late double num1, num2 = 0;
+  int syntaxIndex = 0;
+  double num = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -124,69 +126,29 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   // x 의 값은 키패드 입력한 값
   Future<void> pressedPad(String x) async {
     String text = padText.isNotEmpty ? padText : '';
-    double prev = 0;
-    String prevSyntax = '';
-    // 덧셈, 뺄셈, 곱셈, 나눗셈 여부 판단
-    // True 면 이전 값 저장 (num1 에)
-    if (isSyntax(x)) {
-      prev = double.parse(padText);
-      prevSyntax = x;
-      text = text + (padText.isNotEmpty ? x : '');
-    } else {
-      switch (x) {
-        case 'C': // 초기화
-          clear();
-          break;
-        case '+/-': // 양음수 변환
-          break;
-        case '%': // 퍼센트
-          break;
-        case '00': // 0 두개 붙이기
-          // text 의 값이 없으면 패스
-          text = text + (padText.isNotEmpty ? x : '');
-          break;
-        case '.': // 소수점 찍기
-          break;
-        case '=': // 계산 완료
-          break;
-        case '0':
-          // text 의 값이 없으면 패스
-          text = text + (padText.isNotEmpty ? x : '');
-          break;
-        default:
-          text = text + x;
-          break;
-      }
+    int index = 0;
+    String currentTotal = '';
+
+    // 부호나 숫자인 경우
+    if (isSyntax(x) || isNum(x)) {
+      text += x;
+      index = isSyntax(x) ? padText.length : 0; // 연산자인 경우 문자열의 길이를 넣어줌(연산자의 마지막 값이라서)
     }
 
     // 계산기 화면의 값 수정
     setState(() {
-      if (x != 'C') {
-        padText = text;
-        num1 = prev;
-        syntax = prevSyntax;
-      }
-      if (syntax.isNotEmpty) {
-        total = num1 % 1 > 0 ? num1.toString() : num1.toStringAsFixed(0);
+      // 초기화
+      if (x == 'C') {
+        clear();
+      } else {
+        if(isSyntax(x)) {
+          syntax = x;
+        }
+        padText = text; // 문자 추가
+        syntaxIndex = index.isPositive ? index : syntaxIndex; // 부호 갱신
+        total = syntaxIndex.isPositive ? getTotal(x) : '';
       }
     });
-  }
-
-  // 숫자 문자열 추가
-  String addString(String x) {
-    String result = '';
-
-    // 숫자 여부 확인
-    if (!isNum(x)) {
-      if (total.isEmpty) {
-        // value 값이 0인 경우 입력된 x만 추가
-        result = x;
-      } else {
-        // value 값이 0이 아닌 경우 기존 value 에 x 추가
-        result = total + x;
-      }
-    }
-    return result;
   }
 
   // 0 문자 더하기
@@ -235,40 +197,44 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   // 소수점 추가
   String addPoint(String x) => '$x.';
 
-  // 더하기
-  void plus(String x) {
-    debugPrint('plus');
-  }
-
-  // 빼기
-  void minus(String x) {
-    debugPrint('minus');
-  }
-
-  // 곱하기
-  void multiply(String x) {
-    debugPrint('multiply');
-  }
-
-  // 나누기
-  void divide(String x) {
-    debugPrint('divide');
-  }
-
-  // 계산
-  void equals() {
-    setState(() {});
-  }
-
   // 클리어
   void clear() {
-    debugPrint('clear()');
     setState(() {
-      for (var x in [total, padText, syntax]) {
-        x = '';
-      }
-      num1 = 0;
-      num2 = 0;
+      total = '';
+      padText = '';
+      syntax = '';
+      num = 0;
+      syntaxIndex = 0;
     });
+  }
+
+  // num 가져오기
+  String getNum() => syntaxIndex.isPositive ? padText.substring(syntaxIndex+1) : '0';
+
+  String getTotal(String x) {
+    if(x == '=') {
+      return total;
+    } else {
+      double result = 0;
+      String numText = getNum();
+      double num = numText.isNotEmpty ? double.parse(numText) : 0;
+      double value = total.isNotEmpty ? double.parse(total) : double.parse(padText.substring(0, syntaxIndex));
+
+      switch(syntax) {
+        case '+':
+          result = value + num;
+          break;
+        case '-':
+          result = value - num;
+          break;
+        case 'x':
+          result = num.isPositive ? value * num : value * 1;
+          break;
+        case '/':
+          result = num.isPositive ? value / num : value / 1;
+          break;
+      }
+      return result % 1 > 0 ? result.toString() : result.toStringAsFixed(0);
+    }
   }
 }
